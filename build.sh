@@ -91,6 +91,7 @@ cat > Scripts/postinstall << EOF
 	--provfile=/private/tmp/prov.xml
 rm /private/tmp/prov.xml
 EOF
+chmod a+x Scripts/postinstall
 
 # Build the pkg
 identifier="${REVERSE_DOMAIN}.${PKGNAME}"
