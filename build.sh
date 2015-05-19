@@ -117,7 +117,7 @@ cat > "${uninstall_script_path}" << EOF
 #!/bin/sh
 "/usr/local/bin/adobe_prtk_${prtk_version}/adobe_prtk" \\
 	--tool=UnSerialize \\
-	--leid="V6{}CreativeCloudTeam-1.0-Mac-GM" \\
+	--leid="${leid}" \\
 	--deactivate
 	/usr/sbin/pkgutil --forget "${identifier}"
 EOF
