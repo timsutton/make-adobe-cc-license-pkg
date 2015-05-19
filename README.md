@@ -13,7 +13,7 @@ So instead, it seems possible to install a Named License and "convert" it to a d
 
 The resultant Munki item you could then assign to a manifest directly, or potentially add as an `update_for` multiple CC products with Named licenses. This way, Munki will keep the license around for as long as at least one CC app (for which this is an `update_for` is installed on the system). Munki will deactivate the license if the last dependent CC app is removed (using Munki).
 
-Requirements:
+## Requirements:
 
 1. A copy of the adobe_prtk executable, which is installed as part of Adobe's Creative Cloud Packager. adobe_prtk will be searched in this directory, or if not found, its installation path (alongside CCP) will be searched: /Applications/Utilities/Adobe Application Manager/CCP/utilities/APTEE/adobe_prtk
 1. A prov.xml file, output from the "Create License File" task in CCP.
