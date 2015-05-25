@@ -1,0 +1,201 @@
+#!/usr/bin/python
+#pylint: disable=line-too-long
+import Foundation
+import optparse
+import os
+import plistlib
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import xml.etree.ElementTree
+
+from string import Template
+from time import localtime
+
+
+def error_exit(msg, code=1):
+    '''Print an error to stderr and exit with a given return code.'''
+    print >> sys.stderr, msg
+    sys.exit(code)
+
+
+def main():
+    '''The main routine.'''
+    munkiimport_path = '/usr/local/munki/munkiimport'
+
+    usage = """The output
+package and an accompanying uninstall script will be placed "
+"in the current directory."""
+    parser = optparse.OptionParser(usage=usage)
+    required = optparse.OptionGroup(parser, "Required options")
+    required.add_option('-d', '--reverse-domain', help=(
+        "Reverse domain to prepend to the package name."))
+    required.add_option('-n', '--name', help=(
+        "Package name (and name of pkginfo if --munki option used)."))
+    parser.add_option_group(required)
+
+    munki = optparse.OptionGroup(parser, "Munki-related options")
+    munki.add_option('-m', '--munki', action='store_true', help=(
+        "Import the output package into Munki using Munki's admin tools. "
+        "The local copies of the packageand uninstall script will be kept. "
+        "Configuration from the `munkiimport` tool will be used."))
+    munki.add_option('--repo-subdirectory', help=(
+        "Munki repo destinatino subdirectory option (passed to munkiimport "
+        "--subdirectory)"))
+    parser.add_option_group(munki)
+
+
+    parser.add_option('-p', '--aptee-path', '--adobe-prtk-path', help=(
+        "Path to an adobe_prtk executable to be included in the package."
+        "If not specified, a CCP installation path on this machine will "
+        "be searched."))
+    parser.add_option('-v', '--version', help=(
+        "Version string for added package. Defaults to today's YYYY.MM.DD"))
+    parser.add_option('-o', '--output-dir', help=(
+        "Directory to output to. Defaults to the current working directory."))
+    opts, args = parser.parse_args()
+
+
+    script_dir = os.path.abspath(os.path.dirname(__file__))
+    templates_dir = os.path.join(script_dir, 'script_templates')
+
+    if len(args) != 1:
+        error_exit("Please provide a single argument: the path to a prov.xml. "
+                   "See -h for more details.")
+
+    output_dir = os.getcwd()
+    if opts.output_dir:
+        if not os.access(opts.output_dir, os.W_OK):
+            error_exit("Output directory %s either does not exist or is not "
+                       "writable." % opts.output_dir)
+        output_dir = opts.output_dir
+
+    if not opts.version:
+        today = localtime()
+        pkg_version = "%04d.%02d.%02d" % (
+            today.tm_year, today.tm_mon, today.tm_mday)
+    else:
+        pkg_version = opts.version
+
+    if not opts.name:
+        error_exit("Flag '-n/--name' is required. See -h for more details.")
+    if not opts.reverse_domain:
+        error_exit("Flag '-d/--reverse-domain' is required. See -h for more details.")
+    pkg_identifier = "%s.%s" % (opts.reverse_domain, opts.name)
+
+
+    # adobe_prtk
+    aptee_path = opts.aptee_path
+    if not opts.aptee_path:
+        ccp_aptee_path = ('/Applications/Utilities/Adobe Application Manager/'
+                          'CCP/utilities/APTEE/adobe_prtk')
+        if os.path.exists(ccp_aptee_path):
+            aptee_path = ccp_aptee_path
+        else:
+            error_exit("No --aptee-path option given and no adobe_prtk could "
+                       "be found in the CCP installation directory! Searched: "
+                       "'%s'" % ccp_aptee_path)
+
+    if not os.access(aptee_path, os.X_OK):
+        error_exit("adobe_prtk at path %s exists, but is not executable!" %
+                   aptee_path)
+
+    # Munki opts
+    if opts.munki:
+        if not os.access(munkiimport_path, os.X_OK):
+            error_exit("The --munki option requires the Munki admin tools "
+                       "to be installed, but no `munkiimport` executable "
+                       "found at %s" % munkiimport_path)
+        if not opts.repo_subdirectory:
+            error_exit("With --munki option, you must also specify "
+                       "--repo-subdirectory")
+        munki_prefs = Foundation.CFPreferencesCopyAppValue(
+            'repo_path', 'com.googlecode.munki.munkiimport')
+        if not munki_prefs:
+            error_exit("--munki option given, but no configuration for the "
+                       "`munkiimport` tool was found! Ensure your repo "
+                       "is properly configured using `munkiimport --configure`")
+
+
+    prov_file = args[0]
+    if not os.path.exists(prov_file):
+        error_exit("Prov file %s could not be found!" % prov_file)
+    try:
+        prov_obj = xml.etree.ElementTree.parse(prov_file)
+    except xml.etree.ElementTree.ParseError as err:
+        error_exit("Error parsing XML: %s" % err)
+
+    # Looking for something like:
+    # <CustomOverrides leid="V6{}CreativeCloudTeam-1.0-Mac-GM">
+    override_elem = prov_obj.find('CustomOverrides[@leid]')
+    if override_elem is None:
+        error_exit("Unable to extract an LEID from the prov XML. Expected to "
+                   "find something in ./Provisioning/CustomOverrides")
+    leid = override_elem.get('leid')
+
+    # get version from adobe_prtk
+    prtk_contents = open(aptee_path).read()
+    match = re.match(r'^.*?(<plist.*?\/plist>).*$', prtk_contents, re.DOTALL)
+    if match:
+        plist = plistlib.readPlistFromString(match.groups()[0])
+    else:
+        error_exit("Unable to extract a version from adobe_prtk.")
+    aptee_version = plist['CFBundleVersion']
+
+    # set up the package root
+    pkgroot = tempfile.mkdtemp()
+    private_tmp = os.path.join(pkgroot, 'private/tmp')
+    prtk_bin_dir = os.path.join(pkgroot, 'usr/local/bin/adobe_prtk_%s' %
+                                aptee_version)
+    for pkgdir in [private_tmp, prtk_bin_dir]:
+        os.makedirs(pkgdir)
+    scripts_dir = tempfile.mkdtemp()
+
+    # copy our two payload files: adobe_prtk and prov.xml
+    shutil.copy(aptee_path, os.path.join(prtk_bin_dir, 'adobe_prtk'))
+    shutil.copy(prov_file, os.path.join(private_tmp, 'prov.xml'))
+
+    # make postinstall script
+    postinstall_template = Template(open(os.path.join(templates_dir, 'postinstall')).read())
+    postinstall_contents = postinstall_template.substitute(
+        adobe_prtk_path='/usr/local/bin/adobe_prtk_%s/adobe_prtk' % aptee_version)
+    postinstall_file = os.path.join(scripts_dir, 'postinstall')
+    with open(postinstall_file, 'w') as postinstall:
+        postinstall.write(postinstall_contents)
+    os.chmod(postinstall_file, 0755)
+
+    # make uninstall script
+    uninstall_template = Template(open(os.path.join(templates_dir, 'uninstall')).read())
+    uninstall_contents = uninstall_template.substitute(
+        adobe_prtk_path='/usr/local/bin/adobe_prtk_%s/adobe_prtk' % aptee_version,
+        identifier=pkg_identifier,
+        leid=leid)
+    uninstall_script_path = os.path.join(output_dir, '%s.uninstall' % opts.name)
+    with open(uninstall_script_path, 'w') as uninstall:
+        uninstall.write(uninstall_contents)
+
+
+    # build it
+    pkg_output_path = os.path.join(output_dir, '%s-%s.pkg' % (opts.name, pkg_version))
+    pkgbuild_cmd = ['/usr/bin/pkgbuild',
+                    '--root', pkgroot,
+                    '--scripts', scripts_dir,
+                    '--version', pkg_version,
+                    '--identifier', pkg_identifier,
+                    pkg_output_path]
+    subprocess.call(pkgbuild_cmd)
+
+    # import into Munki
+    if opts.munki:
+        munki_cmd = ['/usr/local/munki/munkiimport',
+                     '--nointeractive',
+                     '--subdirectory', opts.repo_subdirectory,
+                     '--uninstall-script', uninstall_script_path,
+                     pkg_output_path]
+        subprocess.call(munki_cmd)
+
+
+if __name__ == '__main__':
+    main()

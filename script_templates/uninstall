@@ -1,0 +1,45 @@
+#!/usr/bin/python
+#pylint: disable=line-too-long
+
+PRTK_EXIT_CODES = {
+    '1': "Arguments passed in command line are invalid.",
+    '14': "Unknown error",
+    '19': "The provXML is missing",
+    '20': "Loading of permanent activation grace failed (due to malformed xml, corrupt or missing Enigma data, or some other error)",
+    '21': "Unable to update PCF/SLCache",
+    '22': "Unable to open a PCF/SLCache session",
+    '23': "The prov.xml file contains invalid empty tag values",
+    '24': "Enigma data has serial number of a language different from that of installed product",
+    '25': "If no product is installed on the target machine or enigma data of serial number could not be decoded",
+    '26': "PCF file not found",
+    '27': "Unable to edit the prov.xml file",
+    '28': "Invalid prov.xml file specified",
+    '29': "No matching license found",
+    '30': "Action not initiated by an admin user",
+    '31': "Invalid locale specified",
+    '32': "Invalid SLConfig path",
+    '33': "Failed to find LEID for serial",
+}
+
+import subprocess
+import sys
+
+def main():
+    cmd = ['$adobe_prtk_path',
+           '--tool=UnSerialize',
+           '--leid=$leid',
+           '--deactivate']
+    print "Beginning adobe_prtk deactivate.."
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+    sys.stdout.write(out)
+    sys.stderr.write(err)
+    if proc.returncode:
+        print >> sys.stderr, "adobe_prtk return code: %s, reason: %s" % (
+            proc.returncode, PRTK_EXIT_CODES[str(proc.returncode)])
+        sys.exit(proc.returncode)
+    print "Forgetting pkg receipt: $identifier"
+    subprocess.call(['/usr/sbin/pkgutil', '--forget', '$identifier'])
+
+if __name__ == '__main__':
+    main()
