@@ -82,13 +82,15 @@ cp "${prov_path}" root/private/tmp/
 
 # Make an installer script to be run as part of the pkg install
 cat > Scripts/postinstall << EOF
-#!/bin/sh
+#!/bin/sh -e
 
 "/usr/local/bin/adobe_prtk_${prtk_version}/adobe_prtk" \
 	--tool=GetPackagePools \
 	--tool=VolumeSerialize \
 	--stream \
 	--provfile=/private/tmp/prov.xml
+echo "exit code from adobe_prtk: $?"
+
 rm /private/tmp/prov.xml
 EOF
 chmod a+x Scripts/postinstall
@@ -114,11 +116,13 @@ rm -rf root Scripts
 # removed by the postinstall script.
 uninstall_script_path=$(mktemp /tmp/CCXXXX)
 cat > "${uninstall_script_path}" << EOF
-#!/bin/sh
+#!/bin/sh -e
 "/usr/local/bin/adobe_prtk_${prtk_version}/adobe_prtk" \\
 	--tool=UnSerialize \\
 	--leid="${leid}" \\
 	--deactivate
+echo "exit code from adobe_prtk: $?"
+
 	/usr/sbin/pkgutil --forget "${identifier}"
 EOF
 
