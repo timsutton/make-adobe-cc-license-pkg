@@ -21,6 +21,7 @@ PRTK_EXIT_CODES = {
     '33': "Failed to find LEID for serial",
 }
 
+import shutil
 import subprocess
 import sys
 
@@ -40,6 +41,7 @@ def main():
         sys.exit(proc.returncode)
     print "Forgetting pkg receipt: $identifier"
     subprocess.call(['/usr/sbin/pkgutil', '--forget', '$identifier'])
+    shutil.rmtree('$adobe_prtk_dir')
 
 if __name__ == '__main__':
     main()

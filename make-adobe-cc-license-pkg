@@ -169,6 +169,7 @@ package and an accompanying uninstall script will be placed "
     # make uninstall script
     uninstall_template = Template(open(os.path.join(templates_dir, 'uninstall')).read())
     uninstall_contents = uninstall_template.substitute(
+        adobe_prtk_dir='/usr/local/bin/adobe_prtk_%s' % aptee_version,
         adobe_prtk_path='/usr/local/bin/adobe_prtk_%s/adobe_prtk' % aptee_version,
         identifier=pkg_identifier,
         leid=leid)
