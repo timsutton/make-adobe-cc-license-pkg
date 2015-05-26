@@ -28,7 +28,8 @@ Run the command with a single argument: path to a prov.xml file, and at least th
 ```
 ./make-adobe-cc-license-pkg \
     --name AdobeCCCompletePool \
-    --reverse-domain diner.r.double
+    --reverse-domain diner.r.double \
+    path/to/my/prov.xml
 ```
 
 Run the command with the `-h` (or `--help`) option to print out the full usage.
