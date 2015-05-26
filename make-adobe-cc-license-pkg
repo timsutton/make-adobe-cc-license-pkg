@@ -127,6 +127,20 @@ package and an accompanying uninstall script will be placed "
     except xml.etree.ElementTree.ParseError as err:
         error_exit("Error parsing XML: %s" % err)
 
+    # to pass the correct command flags to adobe_prtk, we need to know
+    # whether this is a device (teams) or serial (enterprise) license,
+    # based on whether there's a 'type' attribute of DBCS in the
+    # EnigmaData element
+    # - this is a list expression within a string, because this is what
+    #   we will pass to our postinstall script template for substitute()
+    enigma_elem = prov_obj.find('EnigmaData')
+    if enigma_elem.get('type') == 'DBCS':
+        # DBCS is used for device licenses
+        adobe_prtk_options = """['--tool=GetPackagePools', '--provfile=/private/tmp/prov.xml']"""
+    else:
+        # if type element not present, it's an enterprise/serial license
+        adobe_prtk_options = """['--tool=VolumeSerialize', '--provfile=/private/tmp/prov.xml']"""
+
     # Looking for something like:
     # <CustomOverrides leid="V6{}CreativeCloudTeam-1.0-Mac-GM">
     override_elem = prov_obj.find('CustomOverrides[@leid]')
@@ -160,7 +174,8 @@ package and an accompanying uninstall script will be placed "
     # make postinstall script
     postinstall_template = Template(open(os.path.join(templates_dir, 'postinstall')).read())
     postinstall_contents = postinstall_template.substitute(
-        adobe_prtk_path='/usr/local/bin/adobe_prtk_%s/adobe_prtk' % aptee_version)
+        adobe_prtk_path='/usr/local/bin/adobe_prtk_%s/adobe_prtk' % aptee_version,
+        adobe_prtk_options=adobe_prtk_options)
     postinstall_file = os.path.join(scripts_dir, 'postinstall')
     with open(postinstall_file, 'w') as postinstall:
         postinstall.write(postinstall_contents)
