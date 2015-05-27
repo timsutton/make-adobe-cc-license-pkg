@@ -191,6 +191,7 @@ package and an accompanying uninstall script will be placed "
     uninstall_script_path = os.path.join(output_dir, '%s.uninstall' % opts.name)
     with open(uninstall_script_path, 'w') as uninstall:
         uninstall.write(uninstall_contents)
+    os.chmod(uninstall_script_path, 0755)
 
 
     # build it
