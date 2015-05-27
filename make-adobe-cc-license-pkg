@@ -164,14 +164,17 @@ package and an accompanying uninstall script will be placed "
     else:
         error_exit("Unable to extract a version from adobe_prtk.")
     aptee_version = plist['CFBundleVersion']
-
-    # set up the package root
     print_status("Extracted version %s from adobe_prtk Info.plist section" %
         aptee_version)
+
+    # set up the package root and some path variables
+    prtk_bin_payload_dir = '/usr/local/bin'
+    prtk_bin_dir_name = 'adobe_prtk_%s' % aptee_version
+    local_prtk_path = os.path.join(prtk_bin_payload_dir, prtk_bin_dir_name,
+        'adobe_prtk')
     pkgroot = tempfile.mkdtemp()
     private_tmp = os.path.join(pkgroot, 'private/tmp')
-    prtk_bin_dir = os.path.join(pkgroot, 'usr/local/bin/adobe_prtk_%s' %
-                                aptee_version)
+    prtk_bin_dir = os.path.join(pkgroot + prtk_bin_payload_dir, prtk_bin_dir_name)
     for pkgdir in [private_tmp, prtk_bin_dir]:
         os.makedirs(pkgdir)
     scripts_dir = tempfile.mkdtemp()
@@ -183,7 +186,7 @@ package and an accompanying uninstall script will be placed "
     # make postinstall script
     postinstall_template = Template(open(os.path.join(templates_dir, 'postinstall')).read())
     postinstall_contents = postinstall_template.substitute(
-        adobe_prtk_path='/usr/local/bin/adobe_prtk_%s/adobe_prtk' % aptee_version,
+        adobe_prtk_path=local_prtk_path,
         adobe_prtk_options=adobe_prtk_options)
     postinstall_file = os.path.join(scripts_dir, 'postinstall')
     with open(postinstall_file, 'w') as postinstall:
@@ -193,11 +196,12 @@ package and an accompanying uninstall script will be placed "
     # make uninstall script
     uninstall_template = Template(open(os.path.join(templates_dir, 'uninstall')).read())
     uninstall_contents = uninstall_template.substitute(
-        adobe_prtk_dir='/usr/local/bin/adobe_prtk_%s' % aptee_version,
-        adobe_prtk_path='/usr/local/bin/adobe_prtk_%s/adobe_prtk' % aptee_version,
+        adobe_prtk_dir=os.path.join(prtk_bin_payload_dir, prtk_bin_dir_name),
+        adobe_prtk_path=local_prtk_path,
         identifier=pkg_identifier,
         leid=leid)
-    uninstall_script_path = os.path.join(output_dir, '%s.uninstall' % opts.name)
+    uninstall_script_path = os.path.join(output_dir, '%s-%s.uninstall' % (
+        opts.name, pkg_version))
     with open(uninstall_script_path, 'w') as uninstall:
         uninstall.write(uninstall_contents)
     os.chmod(uninstall_script_path, 0755)
