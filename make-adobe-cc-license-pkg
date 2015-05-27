@@ -16,9 +16,13 @@ from time import localtime
 
 
 def error_exit(msg, code=1):
-    '''Print an error to stderr and exit with a given return code.'''
-    print >> sys.stderr, msg
+    '''Print a red error to stderr and exit with a given return code.'''
+    print >> sys.stderr, "\033[0;31m" + msg + "\033[0m"
     sys.exit(code)
+
+def print_status(msg):
+    '''Print a status message (in cyan).'''
+    print "\033[0;36m** " + msg + "\033[0m"
 
 
 def main():
@@ -137,9 +141,11 @@ package and an accompanying uninstall script will be placed "
     if enigma_elem.get('type') == 'DBCS':
         # DBCS is used for device licenses
         adobe_prtk_options = """['--tool=GetPackagePools', '--provfile=/private/tmp/prov.xml']"""
+        print_status("Found DBCS (device) license type in prov.xml")
     else:
         # if type element not present, it's an enterprise/serial license
         adobe_prtk_options = """['--tool=VolumeSerialize', '--provfile=/private/tmp/prov.xml']"""
+        print_status("Found serial number (enterprise) license type in prov.xml")
 
     # Looking for something like:
     # <CustomOverrides leid="V6{}CreativeCloudTeam-1.0-Mac-GM">
@@ -148,6 +154,7 @@ package and an accompanying uninstall script will be placed "
         error_exit("Unable to extract an LEID from the prov XML. Expected to "
                    "find something in ./Provisioning/CustomOverrides")
     leid = override_elem.get('leid')
+    print_status("Found LEID '%s' in prov.xml" % leid)
 
     # get version from adobe_prtk
     prtk_contents = open(aptee_path).read()
@@ -159,6 +166,8 @@ package and an accompanying uninstall script will be placed "
     aptee_version = plist['CFBundleVersion']
 
     # set up the package root
+    print_status("Extracted version %s from adobe_prtk Info.plist section" %
+        aptee_version)
     pkgroot = tempfile.mkdtemp()
     private_tmp = os.path.join(pkgroot, 'private/tmp')
     prtk_bin_dir = os.path.join(pkgroot, 'usr/local/bin/adobe_prtk_%s' %
@@ -192,6 +201,7 @@ package and an accompanying uninstall script will be placed "
     with open(uninstall_script_path, 'w') as uninstall:
         uninstall.write(uninstall_contents)
     os.chmod(uninstall_script_path, 0755)
+    print_status("Wrote uninstall script to %s" % uninstall_script_path)
 
 
     # build it
@@ -203,15 +213,18 @@ package and an accompanying uninstall script will be placed "
                     '--identifier', pkg_identifier,
                     pkg_output_path]
     subprocess.call(pkgbuild_cmd)
+    print_status("Built package at %s" % pkg_output_path)
 
     # import into Munki
     if opts.munki:
+        print_status("Importing into Munki..")
         munki_cmd = ['/usr/local/munki/munkiimport',
                      '--nointeractive',
                      '--subdirectory', opts.repo_subdirectory,
                      '--uninstall-script', uninstall_script_path,
                      pkg_output_path]
         subprocess.call(munki_cmd)
+    print_status("Done.")
 
 
 if __name__ == '__main__':
