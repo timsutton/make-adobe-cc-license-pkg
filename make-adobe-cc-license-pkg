@@ -47,7 +47,7 @@ package and an accompanying uninstall script will be placed "
     parser.add_option_group(munki)
 
 
-    parser.add_option('-p', '--aptee-path', '--adobe-prtk-path', help=(
+    parser.add_option('-a', '--aptee-path', '--adobe-prtk-path', help=(
         "Path to an adobe_prtk executable to be included in the package."
         "If not specified, a CCP installation path on this machine will "
         "be searched."))
