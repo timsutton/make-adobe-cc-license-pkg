@@ -59,6 +59,9 @@ package and an accompanying uninstall script will be placed "
         "Version string for added package. Defaults to today's YYYY.MM.DD"))
     parser.add_option('-o', '--output-dir', help=(
         "Directory to output to. Defaults to the current working directory."))
+    parser.add_option('-r', '--remove-sw-tag', help=(
+        "Add the '--removeSWTag' adobe_prtk flag to the uninstaller, which "
+        "will remove the software entitlement tags upon deactivation."))
     opts, args = parser.parse_args()
 
 
@@ -140,11 +143,11 @@ package and an accompanying uninstall script will be placed "
     enigma_elem = prov_obj.find('EnigmaData')
     if enigma_elem.get('type') == 'DBCS':
         # DBCS is used for device licenses
-        adobe_prtk_options = """['--tool=GetPackagePools', '--provfile=/private/tmp/prov.xml']"""
+        prtk_install_options = """['--tool=GetPackagePools', '--provfile=/private/tmp/prov.xml']"""
         print_status("Found DBCS (device) license type in prov.xml")
     else:
         # if type element not present, it's an enterprise/serial license
-        adobe_prtk_options = """['--tool=VolumeSerialize', '--provfile=/private/tmp/prov.xml']"""
+        prtk_install_options = """['--tool=VolumeSerialize', '--provfile=/private/tmp/prov.xml']"""
         print_status("Found serial number (enterprise) license type in prov.xml")
 
     # Looking for something like:
@@ -187,19 +190,26 @@ package and an accompanying uninstall script will be placed "
     postinstall_template = Template(open(os.path.join(templates_dir, 'postinstall')).read())
     postinstall_contents = postinstall_template.substitute(
         adobe_prtk_path=local_prtk_path,
-        adobe_prtk_options=adobe_prtk_options)
+        adobe_prtk_options=prtk_install_options)
     postinstall_file = os.path.join(scripts_dir, 'postinstall')
     with open(postinstall_file, 'w') as postinstall:
         postinstall.write(postinstall_contents)
     os.chmod(postinstall_file, 0755)
 
+
     # make uninstall script
+    prtk_uninstall_options = "['--tool=UnSerialize', '--leid=%s', '--deactivate'" % leid
+    if opts.remove_sw_tag:
+        prtk_uninstall_options += ", '--removeSWTag']"
+    else:
+        prtk_uninstall_options += "]"
+
     uninstall_template = Template(open(os.path.join(templates_dir, 'uninstall')).read())
     uninstall_contents = uninstall_template.substitute(
         adobe_prtk_dir=os.path.join(prtk_bin_payload_dir, prtk_bin_dir_name),
         adobe_prtk_path=local_prtk_path,
-        identifier=pkg_identifier,
-        leid=leid)
+        adobe_prtk_options=prtk_uninstall_options,
+        identifier=pkg_identifier)
     uninstall_script_path = os.path.join(output_dir, '%s-%s.uninstall' % (
         opts.name, pkg_version))
     with open(uninstall_script_path, 'w') as uninstall:
