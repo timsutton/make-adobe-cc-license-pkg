@@ -165,13 +165,13 @@ package and an accompanying uninstall script will be placed "
         error_exit("Unable to extract a version from adobe_prtk.")
     aptee_version = plist['CFBundleVersion']
     print_status("Extracted version %s from adobe_prtk Info.plist section" %
-        aptee_version)
+                 aptee_version)
 
     # set up the package root and some path variables
     prtk_bin_payload_dir = '/usr/local/bin'
     prtk_bin_dir_name = 'adobe_prtk_%s' % aptee_version
     local_prtk_path = os.path.join(prtk_bin_payload_dir, prtk_bin_dir_name,
-        'adobe_prtk')
+                                   'adobe_prtk')
     pkgroot = tempfile.mkdtemp()
     private_tmp = os.path.join(pkgroot, 'private/tmp')
     prtk_bin_dir = os.path.join(pkgroot + prtk_bin_payload_dir, prtk_bin_dir_name)
