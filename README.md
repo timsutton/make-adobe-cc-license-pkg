@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a command-line tool that makes it easier to deploy Adobe Creative Cloud device license files output by the Creative Cloud Packager application.
+This is a command-line tool that makes it easier to deploy Adobe Creative Cloud device license files (output by the Creative Cloud Packager application) on OS X, by building them into a standard OS X package installer.
 
 Given a `prov.xml` output file from Creative Cloud Packager, this tool packages the `adobe_prtk` executable and adds a postinstall script to perform the activation. It can also import the package into Munki with an appropriate uninstaller script added so that the license can be deactivated simply by removing the item using Munki. If not using Munki, the uninstall script is output alongside the package for your own use.
 
