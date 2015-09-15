@@ -55,7 +55,8 @@ package and an accompanying uninstall script will be placed "
         "If not specified, a CCP installation path on this machine will "
         "be searched."))
     parser.add_option('-v', '--version', help=(
-        "Version string for added package. Defaults to today's YYYY.MM.DD"))
+        "Version string for created package. Defaults to today's date in the "
+        "format 'YYYY.MM.DD'"))
     parser.add_option('-d', '--reverse-domain', help=(
         "Reverse domain to prepend to the package name. Defaults to '%s'."
         % REVERSE_DOMAIN_DEFAULT))
