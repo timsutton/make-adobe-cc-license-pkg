@@ -1,4 +1,4 @@
-# make-adobe-cc-licenser-pkg
+# make-adobe-cc-license-pkg
 
 ## Overview
 
