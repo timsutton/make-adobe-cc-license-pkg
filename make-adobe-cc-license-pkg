@@ -30,14 +30,14 @@ def main():
     '''The main routine.'''
     munkiimport_path = '/usr/local/munki/munkiimport'
 
-    usage = """The output
-package and an accompanying uninstall script will be placed "
-"in the current directory."""
+    usage = """%prog [options] <path/to/license_file_dir>
+
+..where license_file_dir is the directory containing the license files output
+by Creative Cloud Packager. helper.bin and prov.xml will be packaged and
+an installer script written to handle installing them. An uninstaller script
+will be output in the same directory as the pkg, and added to a Munki pkginfo
+if --munki is used."""
     parser = optparse.OptionParser(usage=usage)
-    required = optparse.OptionGroup(parser, "Required options")
-    required.add_option('-n', '--name', help=(
-        "Package name (and name of pkginfo if --munki option used)."))
-    parser.add_option_group(required)
 
     munki = optparse.OptionGroup(parser, "Munki-related options")
     munki.add_option('-m', '--munki', action='store_true', help=(
@@ -45,21 +45,25 @@ package and an accompanying uninstall script will be placed "
         "The local copies of the packageand uninstall script will be kept. "
         "Configuration from the `munkiimport` tool will be used."))
     munki.add_option('--repo-subdirectory', help=(
-        "Munki repo destinatino subdirectory option (passed to munkiimport "
+        "Munki repo destination subdirectory option (passed to munkiimport "
         "--subdirectory)"))
     parser.add_option_group(munki)
 
 
-    parser.add_option('-a', '--aptee-path', '--adobe-prtk-path', help=(
-        "Path to an adobe_prtk executable to be included in the package."
-        "If not specified, a CCP installation path on this machine will "
-        "be searched."))
-    parser.add_option('-v', '--version', help=(
+    pkg_parser = optparse.OptionGroup(parser, "Package-related options")
+    pkg_parser.add_option('-n', '--name', help=(
+        "Package name (and name of pkginfo if --munki option used). "
+        "Defaults to the name of the directory containing the license "
+        "files."))
+    pkg_parser.add_option('-v', '--version', help=(
         "Version string for created package. Defaults to today's date in the "
         "format 'YYYY.MM.DD'"))
-    parser.add_option('-d', '--reverse-domain', help=(
+    pkg_parser.add_option('-d', '--reverse-domain', help=(
         "Reverse domain to prepend to the package name. Defaults to '%s'."
         % REVERSE_DOMAIN_DEFAULT))
+    parser.add_option_group(pkg_parser)
+
+
     parser.add_option('-o', '--output-dir', help=(
         "Directory to output to. Defaults to the current working directory."))
     parser.add_option('-r', '--remove-sw-tag', help=(
@@ -72,8 +76,19 @@ package and an accompanying uninstall script will be placed "
     templates_dir = os.path.join(script_dir, 'script_templates')
 
     if len(args) != 1:
-        error_exit("Please provide a single argument: the path to a prov.xml. "
+        error_exit("Please provide a single argument: the path to the "
+                   "directory containing the license files output from CCP. "
                    "See -h for more details.")
+
+    license_files_dir = args[0]
+    prov_file = os.path.join(license_files_dir, 'prov.xml')
+    if not os.path.exists(prov_file):
+        error_exit("Prov file '%s' could not be found!" % prov_file)
+    try:
+        prov_obj = xml.etree.ElementTree.parse(prov_file)
+    except xml.etree.ElementTree.ParseError as err:
+        error_exit("Error parsing XML: %s" % err)
+
 
     output_dir = os.getcwd()
     if opts.output_dir:
@@ -89,28 +104,11 @@ package and an accompanying uninstall script will be placed "
     else:
         pkg_version = opts.version
 
-    if not opts.name:
-        error_exit("Flag '-n/--name' is required. See -h for more details.")
-
-    reverse_domain = opts.reverse_domain or REVERSE_DOMAIN_DEFAULT
-    pkg_identifier = "%s.%s" % (reverse_domain, opts.name)
-
-
     # adobe_prtk
-    aptee_path = opts.aptee_path
-    if not opts.aptee_path:
-        ccp_aptee_path = ('/Applications/Utilities/Adobe Application Manager/'
-                          'CCP/utilities/APTEE/adobe_prtk')
-        if os.path.exists(ccp_aptee_path):
-            aptee_path = ccp_aptee_path
-        else:
-            error_exit("No --aptee-path option given and no adobe_prtk could "
-                       "be found in the CCP installation directory! Searched: "
-                       "'%s'" % ccp_aptee_path)
-
-    if not os.access(aptee_path, os.X_OK):
-        error_exit("adobe_prtk at path %s exists, but is not executable!" %
-                   aptee_path)
+    aptee_path = os.path.join(license_files_dir, 'helper.bin')
+    if not os.path.exists(aptee_path) or not os.access(aptee_path, os.X_OK):
+        error_exit("helper.bin (adobe_prtk) at path %s exists, but is not "
+                   "executable!" % aptee_path)
 
     # Munki opts
     if opts.munki:
@@ -128,14 +126,11 @@ package and an accompanying uninstall script will be placed "
                        "`munkiimport` tool was found! Ensure your repo "
                        "is properly configured using `munkiimport --configure`")
 
+    # package params
+    pkg_name = opts.name or os.path.basename(os.path.dirname(prov_file))
 
-    prov_file = args[0]
-    if not os.path.exists(prov_file):
-        error_exit("Prov file %s could not be found!" % prov_file)
-    try:
-        prov_obj = xml.etree.ElementTree.parse(prov_file)
-    except xml.etree.ElementTree.ParseError as err:
-        error_exit("Error parsing XML: %s" % err)
+    reverse_domain = opts.reverse_domain or REVERSE_DOMAIN_DEFAULT
+    pkg_identifier = "%s.%s" % (reverse_domain, pkg_name)
 
     # to pass the correct command flags to adobe_prtk, we need to know
     # whether this is a device (teams) or serial (enterprise) license,
@@ -162,7 +157,7 @@ package and an accompanying uninstall script will be placed "
     leid = override_elem.get('leid')
     print_status("Found LEID '%s' in prov.xml" % leid)
 
-    # get version from adobe_prtk
+    # get version from adobe_prtk by scanning for plist content
     prtk_contents = open(aptee_path).read()
     match = re.match(r'^.*?(<plist.*?\/plist>).*$', prtk_contents, re.DOTALL)
     if match:
@@ -214,7 +209,7 @@ package and an accompanying uninstall script will be placed "
         adobe_prtk_options=prtk_uninstall_options,
         identifier=pkg_identifier)
     uninstall_script_path = os.path.join(output_dir, '%s-%s.uninstall' % (
-        opts.name, pkg_version))
+        pkg_name, pkg_version))
     with open(uninstall_script_path, 'w') as uninstall:
         uninstall.write(uninstall_contents)
     os.chmod(uninstall_script_path, 0755)
@@ -222,7 +217,7 @@ package and an accompanying uninstall script will be placed "
 
 
     # build it
-    pkg_output_path = os.path.join(output_dir, '%s-%s.pkg' % (opts.name, pkg_version))
+    pkg_output_path = os.path.join(output_dir, '%s-%s.pkg' % (pkg_name, pkg_version))
     pkgbuild_cmd = ['/usr/bin/pkgbuild',
                     '--root', pkgroot,
                     '--scripts', scripts_dir,
