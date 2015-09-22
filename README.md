@@ -32,7 +32,7 @@ Run the command with a single argument: the path to a directory containing the o
 
 Run the command with the `-h` (or `--help`) option to print out the full usage. There are multiple customization options for package parameters.
 
-If you've also used the `--munki` option to import the package into Munki, you will likely want to manually modify other pkginfo keys such as `display_name`, `description`, etc. This script isn't meant to be an all-encompassing Munki importer tool that passes any other options through to `munkiimport`.
+If you've also used the `--munki` option to import the package into Munki, you will likely want to modify some other pkginfo keys in the resultant pkginfo file, such as `display_name`, `description`, etc. This script isn't meant to be an all-encompassing Munki importer tool that passes any other options through to `munkiimport`, just enough to import a functional item into Munki with the appropriate `uninstall_*` keys.
 
 ## What's it actually do?
 
@@ -48,6 +48,8 @@ If you've also used the `--munki` option to import the package into Munki, you w
 
 Thanks to [James Stewart](https://github.com/jgstew) for pointing out that the `helper.bin` file is identical to `adobe_prtk`. Previously this tool used to look for the undocumented location where `adobe_prtk` is installed along with CCP, or require you to include your own copy of the tool. The script is now much more portable.
 
+Thanks to [Patrick Fergus](https://foigus.wordpress.com) for testing and feedback with Enterprise licenses.
+
 ## You're welcome
 
-Adobe, you could have made this so much easier. Please use this as an example of how you can make things at least a little bit easier.
+Adobe, you could have made this so much easier. Please use this utility as an example of how you can make things at least a little bit easier.
