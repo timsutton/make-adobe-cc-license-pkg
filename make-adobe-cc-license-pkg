@@ -15,6 +15,7 @@ from string import Template
 from time import localtime
 
 REVERSE_DOMAIN_DEFAULT = 'com.github.make-adobe-cc-license-pkg'
+MUNKI_SUBDIR_DEFAULT = 'apps/Adobe/CC/Licenses'
 
 def error_exit(msg, code=1):
     '''Print a red error to stderr and exit with a given return code.'''
@@ -44,9 +45,9 @@ if --munki is used."""
         "Import the output package into Munki using Munki's admin tools. "
         "The local copies of the packageand uninstall script will be kept. "
         "Configuration from the `munkiimport` tool will be used."))
-    munki.add_option('--repo-subdirectory', help=(
-        "Munki repo destination subdirectory option (passed to munkiimport "
-        "--subdirectory)"))
+    munki.add_option('--repo-subdirectory', default=MUNKI_SUBDIR_DEFAULT,
+        help=("Munki repo destination subdirectory option (passed to munkiimport "
+              "--subdirectory). Defaults to '%s'.") % MUNKI_SUBDIR_DEFAULT)
     parser.add_option_group(munki)
 
 
@@ -116,9 +117,6 @@ if --munki is used."""
             error_exit("The --munki option requires the Munki admin tools "
                        "to be installed, but no `munkiimport` executable "
                        "found at %s" % munkiimport_path)
-        if not opts.repo_subdirectory:
-            error_exit("With --munki option, you must also specify "
-                       "--repo-subdirectory")
         munki_prefs = Foundation.CFPreferencesCopyAppValue(
             'repo_path', 'com.googlecode.munki.munkiimport')
         if not munki_prefs:
