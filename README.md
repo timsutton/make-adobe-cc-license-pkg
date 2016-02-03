@@ -46,6 +46,12 @@ If you've also used the `--munki` option to import the package into Munki, you w
 1. If the `--munki` option is given, the pkg will be imported into Munki, with the uninstall script set as the `uninstall_script`.
 1. The resultant pkg and uninstall script will be written to the directory specified by `--output` or if omitted, the current working directory.
 
+## More documentation
+
+I've written a [series of blog posts](https://macops.ca/tag/creative-cloud) on deploying Creative Cloud using Munki, which includes considerations on deploying licenses.
+
+At [MacSysAdmin 2015](http://macsysadmin.se/2015/Home.html), I gave a [recorded video session](http://docs.macsysadmin.se/2015/video/Day1Session4.mp4) on Mac Admin tools that included an explanation of deploying Adobe CC using Munki, aamporter and make-adobe-cc-license-pkg (see 12:00-37:30 in the video).
+
 ## Thanks
 
 Thanks to [James Stewart](https://github.com/jgstew) for pointing out that the `helper.bin` file is identical to `adobe_prtk`. Previously this tool used to look for the undocumented location where `adobe_prtk` is installed along with CCP, or require you to include your own copy of the tool. The script is now much more portable.
