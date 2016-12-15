@@ -13,6 +13,7 @@ import xml.etree.ElementTree
 
 from string import Template
 from time import localtime
+from distutils.version import LooseVersion
 
 REVERSE_DOMAIN_DEFAULT = 'com.github.make-adobe-cc-license-pkg'
 MUNKI_SUBDIR_DEFAULT = 'apps/Adobe/CC/Licenses'
@@ -195,6 +196,11 @@ if --munki is used."""
 
     # make uninstall script
     prtk_uninstall_options = "['--tool=UnSerialize', '--leid=%s', '--deactivate'" % leid
+    # RemoveVolumeSerial added '--force', presumably to override new logic
+    # introduced in 10.x as part of:
+    # https://helpx.adobe.com/creative-cloud/kb/products-package-get-unserialized-unsubscribed.html
+    if LooseVersion(aptee_version) >= LooseVersion('10.0.0.36'):
+        prtk_uninstall_options += ", '--force'"
     if opts.remove_sw_tag:
         prtk_uninstall_options += ", '--removeSWTag']"
     else:
