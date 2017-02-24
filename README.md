@@ -10,23 +10,23 @@ Given a path to the license file output from Creative Cloud Packager, this tool 
 
 Here's a [blog post](http://macops.ca/adobe-creative-cloud-deployment-packaging-a-license-file).
 
-Adobe Creative Cloud Packager offers an option "Create License File," but does not make it obvious about how to deploy the license activation, and there's no tool for deactivating a CC For Education "device" license and returning it to the license pool. The `RemoveVolumeSerial` tool output by CCP can only be used for those with Enterprise agreements. (An enterprise LEID is hardcoded in the binary.) There is some very confusing documentation available [here](https://helpx.adobe.com/creative-cloud/packager/create-license-file.html), [here](https://helpx.adobe.com/creative-cloud/packager/provisioning-toolkit-enterprise.html), and more details about LEIDs [here](https://helpx.adobe.com/content/help/en/creative-cloud/packager/creative-cloud-licensing-identifiers.html).
+Adobe Creative Cloud Packager offers an option "Create License Package," but does not make it obvious about how to deploy the license activation, and there's no tool for _deactivating_ the "device" license used by CC for Teams Education agreements and returning it to the license pool. The `RemoveVolumeSerial` tool output by CCP can _only_ be used for those with Enterprise agreements. (An enterprise LEID is hardcoded in the binary.) There is some very confusing documentation available [here](https://helpx.adobe.com/creative-cloud/packager/create-license-file.html), [here](https://helpx.adobe.com/creative-cloud/packager/provisioning-toolkit-enterprise.html), and more details about LEIDs [here](https://helpx.adobe.com/content/help/en/creative-cloud/packager/creative-cloud-licensing-identifiers.html).
 
 Why would you even want to make a license file, when there's already an option to build device licensed packages? After all, these packages will handle activating a device license, and Munki has support for running CCP's uninstaller packages to remove the application. Unfortunately, uninstalling a device-licensed package built with CCP removes that device license activation _regardless_ of whether other applications also relying on that activation are installed, making it a pain to try and manage multiple apps within a single device pool independently of one another.
 
-This behaviour where uninstalling a licensed application package also uninstalls the license (even if other applications may require it) was classified by Adobe as a bug and scheduled to be fixed. The bug was first [documented in April 2015](https://twitter.com/Adobe_ITToolkit/status/591361032905433088), and it has not yet been fixed.
+This behaviour where uninstalling a licensed application package also uninstalls the license (even if other applications may require it) was classified by Adobe as a bug and scheduled to be fixed. The bug was first [acknowledged in April 2015](https://twitter.com/Adobe_ITToolkit/status/591361032905433088), and quite a while after this tool was written it was eventually [fixed](https://helpx.adobe.com/creative-cloud/kb/products-package-get-unserialized-unsubscribed.html) by the Adobe Enterprise tools team in the fall of 2016.
 
-So instead, it seems possible to install a Named License and "convert" it to a device license using a license file and Adobe's activation tools. This might be a more manageable deployment scenario for your environment, regardless of the bug described above, because it allows you to build a single Named installer and then optionally apply a device license to that machine (and remove it later to restore it to a Named license).
+It is possible install a Named License and "convert" it to a device license using a license file and Adobe's activation tools. This might be a more manageable deployment scenario for your environment, regardless of the bug described above, because it allows you to build a single Named installer and then optionally apply a device license to that machine (and remove it later to restore it to a Named license).
 
 With Munki, you could then assign this license pkg to a manifest directly, or potentially add it as an `update_for` multiple CC products with Named licenses. This way, Munki will keep the license around for as long as at least one CC app (for which this is an `update_for` is installed on the system). Munki will deactivate the license if the last dependent CC app is removed (using Munki).
 
 ## Requirements
 
-This tool only requires the output from the Creative Cloud Packager's "Create License File" workflow.
+This tool only requires the output from the Creative Cloud Packager's "Create License Package" workflow.
 
 ## Usage
 
-Run the command with a single argument: the path to a directory containing the output of a "Create License File" workflow from CCP:
+Run the command with a single argument: the path to a directory containing the output of a "Create License Package" workflow from CCP:
 
 ```
 ./make-adobe-cc-license-pkg path/to/ccp/license/files/dir
