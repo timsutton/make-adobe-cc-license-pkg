@@ -1,0 +1,58 @@
+#!/usr/bin/python
+# pylint: disable=locally-disabled, line-too-long, missing-docstring
+
+from __future__ import print_function
+
+import os
+import re
+import sys
+
+from glob import glob
+from xml.etree import ElementTree
+
+def main():
+    pcf_root = '/Library/Application Support/Adobe/PCF'
+    if sys.platform == 'win32':
+        pcf_root = os.path.join(os.environ['SYSTEMDRIVE'],
+                                '\\Program Files (x86)\\Common Files\\Adobe\\PCF')
+    xmls = glob(os.path.join(pcf_root, '*.xml'))
+    for xml_file in xmls:
+        # Sanity-check the filename and basic XML structure
+        # (ADBE.. string is only present for HyperDrive-installed products)
+        #
+        # - We're also not skipping any products which don't (currently)
+        #   support device- or serial-based licensing like SPRK (Experience
+        #   Design) or ESHR (Project Felix). Adding this element to these
+        #   PCFs doesn't seem to have any negative impact, since these will
+        #   trigger a sign-in anyway.
+        match = re.match(r'^({.*?ADBE.*?}).*$', os.path.basename(xml_file))
+        if not match:
+            sys.stderr.write("Skipping file '%s', does not match a PCF file pattern\n" % xml_file)
+            continue
+        adbe_code = match.groups()[0]
+        root = ElementTree.parse(xml_file)
+        payload = root.find("./Payload[@adobeCode='%s']" % adbe_code)
+        if payload is None:
+            sys.stderr.write("Didn't find expected Adobe code %s in any 'Payload' element"
+                             " in file %s\n" % (adbe_code, xml_file))
+            continue
+
+        # Check and skip if the serial override key already exists
+        if payload.find("Data[@key='REG_SERIAL_OVERRIDE']") is not None:
+            continue
+
+        # Finally, make a new element and append it to the Payload element
+        new_element = ElementTree.Element('Data', attrib={'key': 'REG_SERIAL_OVERRIDE'})
+        new_element.text = 'Suppress'
+        payload.append(new_element)
+
+        try:
+            root.write(xml_file, encoding='utf-8', xml_declaration=True)
+            print("Wrote modified PCF XML file: '%s'" % xml_file)
+        except IOError:
+            sys.stderr.write("ERROR: Can't write to file '%s'. Make sure you have "
+                             "sufficient privileges to write to this location. "
+                             % xml_file)
+
+if __name__ == '__main__':
+    main()

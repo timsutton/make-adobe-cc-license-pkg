@@ -183,6 +183,12 @@ if --munki is used."""
     shutil.copy(aptee_path, os.path.join(prtk_bin_dir, 'adobe_prtk'))
     shutil.copy(prov_file, os.path.join(private_tmp, 'prov.xml'))
 
+    # add scripts from this repo's 'support' dir
+    support_bin_payload_dir = '/usr/local/bin/adobe_cc_license_pkg_support'
+    support_bin_dir = os.path.join(pkgroot + support_bin_payload_dir)
+    this_script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+    shutil.copytree(os.path.join(this_script_dir, 'support'), support_bin_dir)
+
     # make postinstall script
     postinstall_template = Template(open(os.path.join(templates_dir, 'postinstall')).read())
     postinstall_contents = postinstall_template.substitute(

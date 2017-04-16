@@ -46,6 +46,24 @@ If you've also used the `--munki` option to import the package into Munki, you w
 1. If the `--munki` option is given, the pkg will be imported into Munki, with the uninstall script set as the `uninstall_script`.
 1. The resultant pkg and uninstall script will be written to the directory specified by `--output` or if omitted, the current working directory.
 
+## Additional tool for June 2016 and newer CC applications
+
+New application versions released from June 2016 onwards use a [newer installer framework](http://blogs.adobe.com/deployment/2016/06/creative-cloud-package-1-9-5-is-live-redesigned-installer-technology-plus-much-more.html) known as "HyperDrive" (or "HD" for short). One frustrating regression of this installer format is that if a Named Licensed app package is installed _after_ a license is installed, that application will show a "Sign In to Creative Cloud" dialog box, which is confusing to both users and administrators - it suggests that a device or serialized license isn't correctly applied.
+
+This regression occurred because the Adobe installer tools team did not consider the use case of wanting to install applications after a license had already been installed to the machine, and while it's possible this may be addressed in a future update, it is not resolved as of April 2017.
+
+The only officially-supported workaround for resolving this issue is to 1) package all applications with licensing included, or 2) re-install a license file after each Named License application installation, which among other things will iterate over all installed products and insert a specific element to packaging metadata XML files which is read by the licensing framework in these applications at launch. Needing to re-install the license file after every application installation, while possible, is awkward to orchestrate via deployment tools. I also am concerned with needing to make modifications to the licensing system more frequently than is necessary, because Adobe has a history of issues with licensing subsystem failures.
+
+As a solution for this issue, when the `make-adobe-cc-license-pkg` tool builds an installer package, it will install an additional script to `/usr/local/bin/adobe_cc_license_pkg_support/suppress_cc_hd_signin`. This script, when run as root, does the very simple operation of adding this same XML element added as part of the license installation, and nothing else. It does not perform any licensing operations or call out to any Adobe deployment tools, and all updates to XML files are idempotent.
+
+To use this tool, _simply call this executable (as root)_ immediately after any Named License package installation. Any metadata files which have already had the modification performed will not be modified again, so this script is idempotent.
+
+This script is not executed for you at any time, it is provided only as an additional tool on the system which you may use if you choose to. You may also choose to take this script out and package it up or run it outside of the context of this repo. This script doesn't require anything else from this repo, it just made sense to me for it to be included here because it's directly related to deploying Adobe apps in conjunction with a license file.
+
+This script also functions on Windows systems which have Python installed. Both Python 2.7 and 3.x versions are supported, but only 64-bit versions of Windows have been tested. This script is not supported by Adobe.
+
+For a more visual explanation of this issue, see my [MacADUK 2017 talk on Mac software deployment](https://youtu.be/pD6Pze1zQ4c?t=1579) where I talked about this issue and the workaround.
+
 ## More documentation
 
 I've written a [series of blog posts](https://macops.ca/tag/creative-cloud) on deploying Creative Cloud using Munki, which includes considerations on deploying licenses.
