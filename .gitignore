@@ -1,3 +1,4 @@
 *.pkg
 *.uninstall
 adobe_prtk
+.DS_Store
