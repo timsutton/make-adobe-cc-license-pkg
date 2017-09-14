@@ -122,8 +122,8 @@ if --munki is used."""
             'repo_url', 'com.googlecode.munki.munkiimport')
         if not munki_prefs:
             error_exit("--munki option given, but Repo URL is not set "
-                       "`munkiimport` tool was found! Ensure your repo "
-                       "is properly configured using `munkiimport --configure`")
+                       "Ensure your repo is properly configured "
+                       "using `munkiimport --configure`")
 
     # package params
     pkg_name = opts.name or os.path.basename(os.path.dirname(prov_file))
