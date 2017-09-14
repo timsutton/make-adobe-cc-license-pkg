@@ -121,7 +121,7 @@ if --munki is used."""
         munki_prefs = Foundation.CFPreferencesCopyAppValue(
             'repo_url', 'com.googlecode.munki.munkiimport')
         if not munki_prefs:
-            error_exit("--munki option given, but no configuration for the "
+            error_exit("--munki option given, but Repo URL is not set "
                        "`munkiimport` tool was found! Ensure your repo "
                        "is properly configured using `munkiimport --configure`")
 
