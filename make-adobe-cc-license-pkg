@@ -119,7 +119,7 @@ if --munki is used."""
                        "to be installed, but no `munkiimport` executable "
                        "found at %s" % munkiimport_path)
         munki_prefs = Foundation.CFPreferencesCopyAppValue(
-            'repo_path', 'com.googlecode.munki.munkiimport')
+            'repo_url', 'com.googlecode.munki.munkiimport')
         if not munki_prefs:
             error_exit("--munki option given, but no configuration for the "
                        "`munkiimport` tool was found! Ensure your repo "
