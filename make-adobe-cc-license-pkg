@@ -44,7 +44,7 @@ if --munki is used."""
     munki = optparse.OptionGroup(parser, "Munki-related options")
     munki.add_option('-m', '--munki', action='store_true', help=(
         "Import the output package into Munki using Munki's admin tools. "
-        "The local copies of the packageand uninstall script will be kept. "
+        "The local copies of the package and uninstall script will be kept. "
         "Configuration from the `munkiimport` tool will be used."))
     munki.add_option('--repo-subdirectory', default=MUNKI_SUBDIR_DEFAULT,
         help=("Munki repo destination subdirectory option (passed to munkiimport "
